@@ -9,9 +9,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 # 复制项目代码
 COPY . .
 
-# 收集静态文件
-RUN python manage.py collectstatic --noinput
-
 EXPOSE 8000
 
 # 启动Django（生产用gunicorn）
