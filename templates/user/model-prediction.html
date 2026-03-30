@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>实时设备监测</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: "Microsoft YaHei", sans-serif;
+            background-color: #001f3f;
+            color: #fff;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        /* 头部样式 */
+        header {
+            text-align: center;
+            padding: 15px;
+            font-size: 20px;
+            font-weight: bold;
+            color: #66ccff;
+            background-color: #002c5f;
+            height: 50px;
+            line-height: 50px;
+        }
+
+        /* 主内容区样式 */
+        .main-content {
+            display: flex;
+            flex: 1;
+            padding: 15px;
+            gap: 15px;
+            height: calc(100vh - 50px);
+        }
+
+        /* 左侧面板 */
+        .left-panel {
+            flex: 2; /* 让左侧更宽 */
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        /* 右侧面板 */
+        .right-panel {
+            flex: 1; /* 保持不变或更小 */
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        /* 地图面板样式 */
+        .map-panel {
+            flex: 4; /* 让地图占左侧更大空间 */
+            display: flex;
+            flex-direction: column;
+            background-color: rgba(0, 40, 80, 0.8);
+            border-radius: 8px;
+            padding: 15px;
+            min-height: 0; /* 让flex布局更好用 */
+        }
+
+        /* 预警信息展示区 */
+        .warning-panel {
+            flex: 1;
+            background-color: rgba(0, 40, 80, 0.8);
+            border-radius: 8px;
+            padding: 15px;
+            overflow-y: auto;
+        }
+
+        .warning-panel h3 {
+            color: #ffcc00;
+            margin: 0 0 10px 0;
+            font-size: 15px;
+        }
+
+        .warning-panel ul {
+            list-style: none;
+            padding-left: 20px;
+            margin: 0;
+        }
+
+        .warning-panel li {
+            margin-bottom: 6px;
+            font-size: 13px;
+        }
+
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 8px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 13px;
+        }
+
+        .legend-color {
+            width: 15px;
+            height: 15px;
+        }
+
+        /* 控制面板 */
+        .panel {
+            background-color: rgba(0, 40, 80, 0.8);
+            border-radius: 8px;
+            padding: 12px;
+        }
+
+        .panel h3 {
+            color: #66ccff;
+            margin: 0 0 12px 0;
+            font-size: 15px;
+        }
+
+        /* 定位表单 */
+        .control-form {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .control-form label {
+            margin: 0;
+            font-size: 14px;
+        }
+
+        .control-form input {
+            width: 100%;
+            padding: 7px;
+            background-color: #003366;
+            border: none;
+            border-radius: 4px;
+            color: white;
+            font-size: 13px;
+        }
+
+        .control-form button {
+            width: 100%;
+            padding: 8px;
+            background-color: #004080;
+            border: none;
+            border-radius: 4px;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        /* 实时流量图 */
+        #flowChart {
+            width: 100%;
+            height: 250px;
+            border-radius: 5px;
+            background-color: #002244;
+            flex-grow: 1;
+        }
+
+        /* 地图控制 */
+        .map-controls {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 8px;
+        }
+
+        .map-controls button {
+            background-color: #003366;
+            color: white;
+            border: none;
+            width: 25px;
+            height: 25px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        /* 传感器数据卡片 */
+        .sensor-data {
+            flex: 1;
+            background-color: rgba(0, 40, 80, 0.8);
+            border-radius: 8px;
+            padding: 15px;
+            overflow-y: auto;
+        }
+
+        .sensor-data h3 {
+            color: #66ccff;
+            margin: 0 0 15px 0;
+            font-size: 15px;
+        }
+
+        .sensor-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sensor-label {
+            color: #ccc;
+            font-size: 14px;
+        }
+
+        .sensor-value {
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        /* 更新时间 */
+        .update-time {
+            text-align: right;
+            color: #66ccff;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+
+        /* 报警指示器 */
+        .alarm-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #66ccff;
+            margin-right: 5px;
+        }
+
+        .alarm-active {
+            background-color: #ff9900;
+        }
+    </style>
+</head>
+<body>
+    <header>实时设备监测</header>
+
+    <div class="main-content">
+        <!-- 左侧面板 -->
+        <div class="left-panel">
+            <!-- 地图面板 -->
+            <div class="map-panel">
+                <h3>吉林省白城市监测地图</h3>
+                <div class="map-controls">
+                    <button id="zoomIn">+</button>
+                    <button id="zoomOut">-</button>
+                    <button id="resetView">⟲</button>
+                </div>
+                <div id="map" style="height:300px; background-color: #002244;"></div>
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #ff0000;"></div>
+                        <span>警告状态</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background-color: #66ccff;"></div>
+                        <span>正常状态</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 预警信息展示区 -->
+            <div class="panel warning-panel">
+                <h3>设备与用水预警</h3>
+                <ul id="warningList">
+                    <li class="warning">井 BC-W088 昨日流量异常激增，疑似漏水</li>
+                    <li class="info">井 BC-W045 用水总量超过本月预算阈值 15%</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 右侧面板 -->
+        <div class="right-panel">
+            <!-- 控制面板 -->
+            <div class="panel">
+                <h3>监测井定位</h3>
+                <form class="control-form">
+                    <label for="wellID">井编号</label>
+                    <input type="text" id="wellID" placeholder="如：BC-W123">
+                    
+                    <label for="lat">纬度</label>
+                    <input type="text" id="lat" placeholder="如：45.6123">
+                    
+                    <label for="lng">经度</label>
+                    <input type="text" id="lng" placeholder="如：123.4876">
+                    
+                    <button id="locate">定位</button>
+                </form>
+            </div>
+
+            <!-- 实时流量图 -->
+            <div class="panel">
+                <h3>流量趋势</h3>
+                <div id="flowChart"></div>
+            </div>
+
+            <!-- 传感器数据面板 -->
+            <div class="panel sensor-data">
+                <h3>传感器数据</h3>
+                <div id="sensorInfo">
+                    <div class="sensor-item">
+                        <span class="sensor-label">传感器名称:</span>
+                        <span class="sensor-value" id="sensorName">传感器-1</span>
+                    </div>
+                    <div class="sensor-item">
+                        <span class="sensor-label">所属设备:</span>
+                        <span class="sensor-value" id="deviceName">modbus设备</span>
+                    </div>
+                    <div class="sensor-item">
+                        <span class="sensor-label">传感器ID:</span>
+                        <span class="sensor-value" id="sensorId">3125482</span>
+                    </div>
+                    <div class="sensor-item">
+                        <span class="sensor-label">当前值:</span>
+                        <span class="sensor-value" id="currentValue">929 立方米</span>
+                    </div>
+                    <div class="sensor-item">
+                        <span class="sensor-label">数据单位:</span>
+                        <span class="sensor-value" id="unit">立方米</span>
+                    </div>
+                    <div class="sensor-item">
+                        <span class="sensor-label">是否报警:</span>
+                        <span class="sensor-value" id="alarmStatus">
+                            <span id="alarmIndicator"></span>
+                            <span id="alarmText">正常</span>
+                        </span>
+                    </div>
+                </div>
+                <div class="update-time">
+                    <span>数据更新时间: </span>
+                    <span id="updateDate">2019-10-19 17:01:05</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 引入地图和图表库 -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
+    <script src="https://webapi.amap.com/maps?v=2.0&key=c712ba18a9feeab71abe1f6c57e8a517"></script>
+    
+    <script>
+        let map;
+        let flowChart;
+        let sensorData = {
+            updateDate: "2019-10-19 17:01:05",
+            flag: "00",
+            sensorName: "传感器-1",
+            userName: "TLINK",
+            deviceId: "200****42",
+            deviceName: "modbus设备",
+            userId: 8,
+            sensorId: "3125482",
+            unit: "立方米",
+            sensorType: 1,
+            isLine: 1,
+            value: "929",
+            isAlarms: 0,
+            lat: "",
+            lng: "",
+            switcher: null
+        };
+
+        // 初始化地图
+        function initMap() {
+            if (typeof AMap === 'undefined') {
+                console.error('AMap库未加载成功，请检查网络连接或API密钥');
+                return;
+            }
+
+            map = new AMap.Map('map', {
+                center: [123.4876, 45.6123], // 白城市中心
+                zoom: 12,
+                viewMode: '2D', // 改为2D模式
+                zooms: [3, 20]
+            });
+
+            // 添加示例监测井标记
+            const wells = [
+                { id: "BC-W088", lat: 45.58, lng: 123.50, name: "监测井2", status: "warning" },
+                { id: "BC-W045", lat: 45.65, lng: 123.42, name: "监测井3", status: "normal" }
+            ];
+
+            // 添加监测井标记并设置图标和交互功能
+            wells.forEach(well => {
+                const iconUrl = {
+                    normal: 'https://webapi.amap.com/theme/v1.3/markers/n/mark_b.png', // 正常状态图标
+                    warning: 'https://webapi.amap.com/theme/v1.3/markers/n/mark_r.png'  // 警告状态图标
+                };
+
+                const marker = new AMap.Marker({
+                    position: [well.lng, well.lat],
+                    icon: new AMap.Icon({
+                        size: new AMap.Size(20, 28), // 图标大小
+                        image: iconUrl[well.status] || iconUrl.normal, // 根据状态选择图标
+                        imageSize: new AMap.Size(20, 28) // 图标大小
+                    }),
+                    title: `${well.name} (${well.id})`
+                });
+
+                marker.setMap(map);
+
+                // 添加点击事件监听器
+                marker.on('click', function () {
+                    document.getElementById('wellID').value = well.id;
+                    document.getElementById('lat').value = well.lat;
+                    document.getElementById('lng').value = well.lng;
+                    updateChart(well.id);
+                });
+
+                // 添加鼠标悬停效果
+                marker.on('mouseover', function () {
+                    marker.setLabel({
+                        content: `<div style="background-color: rgba(0,0,0,0.8); color: white; padding: 3px 5px; border-radius: 3px; font-size: 12px;"><b>${well.name}</b><br>ID: ${well.id}<br>状态: ${getStatusText(well.status)}</div>`,
+                        direction: 'top'
+                    });
+                });
+
+                // 鼠标移出时清除标签
+                marker.on('mouseout', function () {
+                    marker.setLabel(null);
+                });
+            });
+
+            // 地图控制功能
+            document.getElementById('zoomIn').addEventListener('click', () => map.zoomIn());
+            document.getElementById('zoomOut').addEventListener('click', () => map.zoomOut());
+            document.getElementById('resetView').addEventListener('click', () => map.setZoomAndCenter(12, [123.4876, 45.6123]));
+
+            // 定位功能
+            document.getElementById('locate').addEventListener('click', () => {
+                const wellID = document.getElementById('wellID').value;
+                const lat = parseFloat(document.getElementById('lat').value);
+                const lng = parseFloat(document.getElementById('lng').value);
+
+                if (wellID && (lat && lng)) {
+                    map.setZoomAndCenter(15, [lng, lat]);
+                    updateChart(wellID);
+                } else if (lat && lng) {
+                    map.setZoomAndCenter(15, [lng, lat]);
+                    updateChart(wellID || '未知');
+                } else if (wellID) {
+                    const well = wells.find(w => w.id === wellID);
+                    if (well) {
+                        map.setZoomAndCenter(15, [well.lng, well.lat]);
+                        updateChart(well.id);
+                    } else {
+                        alert('未找到该井编号，请检查或输入坐标');
+                    }
+                } else {
+                    alert('请输入井编号或坐标信息');
+                }
+            });
+        }
+
+        // 初始化实时流量图
+        function initFlowChart() {
+            flowChart = echarts.init(document.getElementById('flowChart'));
+            updateFlowChart(); // 初始加载图表
+        }
+
+        // 更新实时流量图（流量数据保持不变）
+        function updateFlowChart() {
+            // 固定流量数据
+            const data = [2.8, 3.2, 4.5, 6.7, 5.3, 4.8, 3.5, 2.1, 1.5, 0.8];
+            const xData = ['7:00', '8:00', '9:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00'];
+            
+            const option = {
+                backgroundColor: 'transparent',
+                title: {
+                    text: 'modbus设备 流量变化趋势',
+                    textStyle: { color: '#66ccff', fontSize: 14 },
+                    left: 'center'
+                },
+                tooltip: {
+                    trigger: 'axis'
+                },
+                grid: {
+                    left: '3%',
+                    right: '4%',
+                    bottom: '3%',
+                    containLabel: true
+                },
+                xAxis: {
+                    type: 'category',
+                    boundaryGap: false,
+                    data: xData,
+                    axisLine: { lineStyle: { color: '#66ccff' } },
+                    axisLabel: { color: '#fff' }
+                },
+                yAxis: {
+                    type: 'value',
+                    name: '立方米/小时',
+                    nameTextStyle: { color: '#66ccff' },
+                    axisLine: { lineStyle: { color: '#66ccff' } },
+                    axisLabel: { color: '#fff' },
+                    splitLine: { lineStyle: { color: 'rgba(102, 204, 255, 0.2)' } }
+                },
+                series: [{
+                    name: '流量',
+                    type: 'line',
+                    stack: '总量',
+                    data: data,
+                    smooth: true,
+                    lineStyle: { color: '#00ccff', width: 2 },
+                    symbol: 'circle',
+                    symbolSize: 6,
+                    itemStyle: { color: '#00ccff' }
+                }]
+            };
+            
+            flowChart.setOption(option);
+        }
+
+        // 更新传感器数据
+        function updateSensorData(data) {
+            // 更新UI显示
+            document.getElementById('sensorName').textContent = data.sensorName;
+            document.getElementById('deviceName').textContent = data.deviceName;
+            document.getElementById('sensorId').textContent = data.sensorId;
+            document.getElementById('currentValue').textContent = data.value + ' 立方米';
+            document.getElementById('unit').textContent = data.unit;
+            
+            const alarmIndicator = document.getElementById('alarmIndicator');
+            const alarmText = document.getElementById('alarmText');
+            
+            if (data.isAlarms === 1) {
+                alarmIndicator.className = 'alarm-indicator alarm-active';
+                alarmText.textContent = '报警中';
+                alarmText.style.color = '#ff9900';
+            } else {
+                alarmIndicator.className = 'alarm-indicator';
+                alarmText.textContent = '正常';
+                alarmText.style.color = '#66ccff';
+            }
+            
+            document.getElementById('updateDate').textContent = data.updateDate;
+        }
+
+        // 定义状态文本
+        function getStatusText(status) {
+            switch (status) {
+                case 'normal': return '正常';
+                case 'warning': return '警告';
+                default: return status;
+            }
+        }
+
+        // 窗口大小调整时重新调整图表大小
+        window.addEventListener('resize', () => {
+            if (flowChart) flowChart.resize();
+        });
+
+        // 页面加载完成后初始化
+        window.onload = function() {
+            initMap(); // 初始化地图
+            initFlowChart(); // 初始化流量图
+            updateSensorData(sensorData); // 初始加载传感器数据
+        };
+    </script>
+</body>
+</html>

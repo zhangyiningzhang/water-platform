@@ -1,0 +1,18 @@
+# Django 核心
+Django==5.2.3
+asgiref==3.8.1
+sqlparse==0.5.3
+
+# 生产服务器
+gunicorn==23.0.0
+
+# 数据处理（groundwater/views.py 用到）
+pandas==2.3.0
+numpy==2.3.0
+
+# 数据库（如果用MySQL）
+PyMySQL==1.1.1
+
+# ML模型
+scikit-learn==1.7.2
+scipy==1.16.2

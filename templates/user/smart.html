@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>用水量预测模型界面</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: "Microsoft YaHei", sans-serif;
+            background: linear-gradient(to bottom, #001f3f, #001933);
+            color: #fff;
+        }
+
+        header {
+            background-color: #002c5f;
+            padding: 20px;
+            text-align: center;
+            font-size: 26px;
+            font-weight: bold;
+            color: #66ccff;
+        }
+
+        .container {
+            display: flex;
+            padding: 20px;
+        }
+
+        .left-panel {
+            width: 30%;
+            background-color: rgba(0, 51, 102, 0.6);
+            padding: 20px;
+            border-radius: 10px;
+            margin-right: 20px;
+        }
+
+        .left-panel h2 {
+            font-size: 20px;
+            color: #66ccff;
+            margin-bottom: 15px;
+        }
+
+        .left-panel label {
+            display: block;
+            margin: 10px 0 5px;
+        }
+
+        .left-panel input, .left-panel select {
+            width: 90%;
+            padding: 6px;
+            border: none;
+            border-radius: 5px;
+            background-color: #003366;
+            color: #fff;
+        }
+
+        .right-panel {
+            flex: 1;
+            background-color: rgba(0, 51, 102, 0.6);
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .info-block {
+            margin-bottom: 20px;
+        }
+
+        .info-block h3 {
+            color: #66ccff;
+            margin-bottom: 10px;
+        }
+
+        .info-block table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .info-block table, th, td {
+            border: 1px solid #66ccff;
+        }
+
+        th, td {
+            padding: 6px;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        button {
+            background-color: #00aaff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            margin-top: 15px;
+            color: white;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0099cc;
+        }
+    </style>
+</head>
+<body>
+
+<header>用水量智能预测平台 - 模型预测界面</header>
+
+<div class="container">
+    <!-- 左侧输入栏 -->
+    <div class="left-panel">
+        <h2>输入信息</h2>
+        <label>灌溉方式（必填）</label>
+        <select id="irrigationMethod" required>
+            <option value="">请选择</option>
+            <option value="滴灌">滴灌</option>
+            <option value="喷灌">喷灌</option>
+            <option value="漫灌">漫灌</option>
+        </select>
+
+        <label>地下水埋深（m）（必填）</label>
+        <input type="number" id="depth" required>
+
+        <label>用电量（kWh）（必填）</label>
+        <input type="number" id="powerUsage" required>
+
+        <label>井龄（年）</label>
+        <input type="number" id="wellAge">
+
+        <label>稳定降深（m）</label>
+        <input type="number" id="drawdown">
+
+        <label>水泵扬程（m）</label>
+        <input type="number" id="lift">
+
+        <label>水泵功率（kW）</label>
+        <input type="number" id="pumpPower">
+
+        <button onclick="predict()">预测用水量</button>
+    </div>
+
+    <!-- 右侧展示栏 -->
+    <div class="right-panel">
+        <div class="info-block">
+            <h3>模型预测结果</h3>
+            <p>选择模型：<span id="selectedModel">--</span></p>
+            <p>预测结果（用水量）：<span id="predictionResult">--</span> m³</p>
+        </div>
+
+        <div class="info-block">
+            <h3>模型信息</h3>
+            <table>
+                <tr>
+                    <th>模型名称</th>
+                    <th>输入因子</th>
+                    <th>准确率</th>
+                    <th>损失函数值</th>
+                </tr>
+                <tr>
+                    <td>精确BP神经网络</td>
+                    <td>6项</td>
+                    <td>0.8933</td>
+                    <td>0.5431</td>
+                </tr>
+                <tr>
+                    <td>汇总BP神经网络</td>
+                    <td>5项</td>
+                    <td>0.8621</td>
+                    <td>0.6124</td>
+                </tr>
+                <tr>
+                    <td>简化BP神经网络</td>
+                    <td>2项</td>
+                    <td>0.7932</td>
+                    <td>0.6890</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+function predict() {
+    // 获取用户输入的数据
+    const depth = document.getElementById("depth").value;
+    const irrigation = document.getElementById("irrigationMethod").value;
+    const power = document.getElementById("powerUsage").value;
+    const age = document.getElementById("wellAge").value;
+    const drawdown = document.getElementById("drawdown").value;
+    const lift = document.getElementById("lift").value;
+    const pump = document.getElementById("pumpPower").value;
+
+    // 计算填写的输入项数量
+    let inputsFilled = [irrigation, depth, power, age, drawdown, lift, pump].filter(val => val !== "").length;
+
+    // 根据输入项数量确定模型
+    let model = "";
+    if (inputsFilled >= 6) {
+        model = "精确BP神经网络";
+    } else if (inputsFilled >= 5) {
+        model = "汇总BP神经网络";
+    } else {
+        model = "简化BP神经网络";
+    }
+
+    // 显示选择的模型
+    document.getElementById("selectedModel").innerText = model;
+
+    // 收集数据并发送到后端
+    const formData = {
+        irrigation_method: irrigation,
+        depth: depth,
+        power_usage: power,
+        well_age: age,
+        drawdown: drawdown,
+        lift: lift,
+        pump_power: pump
+    };
+
+    // 禁用按钮，防止重复点击
+    document.querySelector('button').disabled = true;
+    document.querySelector('button').innerText = '正在计算...';
+
+    // 使用 fetch 发送数据到 Django 后端
+    fetch('http://127.0.0.1:8000/ml_model/predict/', {  // Django 后端接口地址
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('网络响应失败');
+        }
+        return response.json();
+    })
+    .then(data => {
+        // 显示后端返回的预测结果
+        document.getElementById("predictionResult").innerText = data.prediction;
+    })
+    .catch((error) => {
+        console.error('Error:', error);
+        alert('数据上传失败，可能是网络问题或后端服务未启动，请检查后重试');
+    })
+    .finally(() => {
+        // 恢复按钮状态
+        document.querySelector('button').disabled = false;
+        document.querySelector('button').innerText = '预测用水量';
+    });
+}
+</script>
+
+</body>
+</html>
