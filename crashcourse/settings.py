@@ -25,7 +25,7 @@ SECRET_KEY = "django-insecure-y0g%pss@vgbh*$fha(px8)itk&sz0q074!amq*f4xhwrz=y5=4
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['water-platform.onrender.com', 'localhost', '127.0.0.1']
 
 
 # Application definition
